@@ -54,7 +54,8 @@ class PaginatePlugin extends ServerPlugin {
 		) {
 			$pageSize = (int)$request->getHeader(self::PAGINATE_COUNT_HEADER) ?: $this->pageSize;
 			$offset = (int)$request->getHeader(self::PAGINATE_OFFSET_HEADER);
-			$copyIterator = new LimitedCopyIterator($fileProperties, $pageSize, $offset);
+			$transformResourceTypeIterator = new TransformResourceTypeIterator($fileProperties);
+			$copyIterator = new LimitedCopyIterator($transformResourceTypeIterator, $pageSize, $offset);
 			['token' => $token, 'count' => $count] = $this->cache->store($url, $copyIterator);
 
 			$fileProperties = $copyIterator->getRequestedItems();
