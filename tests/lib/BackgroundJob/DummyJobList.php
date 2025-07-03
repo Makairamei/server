@@ -11,6 +11,7 @@ namespace Test\BackgroundJob;
 use ArrayIterator;
 use OC\BackgroundJob\JobList;
 use OCP\BackgroundJob\IJob;
+use OCP\BackgroundJob\Job;
 use OCP\Server;
 
 /**
@@ -136,7 +137,7 @@ class DummyJobList extends JobList {
 	/**
 	 * set the job that was last ran
 	 *
-	 * @param \OCP\BackgroundJob\Job $job
+	 * @param Job $job
 	 */
 	public function setLastJob(IJob $job): void {
 		$i = array_search($job, $this->jobs);
