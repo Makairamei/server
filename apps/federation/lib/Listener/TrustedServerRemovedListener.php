@@ -32,6 +32,11 @@ class TrustedServerRemovedListener implements IEventListener {
 		$this->removeJobsByUrl(GetSharedSecret::class, $event->getUrl());
 	}
 
+	/**
+	 * Remove RequestSharedSecret or GetSharedSecret jobs from the job list by their URL.
+	 * The jobs are scheduled with url, token, and created as arguments.
+	 * Thus, we have to loop over the jobs here and cannot use IJobList.remove.
+	 */
 	private function removeJobsByUrl(string $class, string $url): void {
 		foreach ($this->jobList->getJobsIterator($class, null, 0) as $job) {
 			$arguments = $job->getArgument();
