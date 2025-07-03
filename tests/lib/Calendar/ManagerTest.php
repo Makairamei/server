@@ -351,7 +351,7 @@ class ManagerTest extends TestCase {
 		$this->assertFalse($result);
 	}
 
-	public function testHandleImipRequestWithNoEvent(): void {
+	public function testHandleImipWithNoEvent(): void {
 		// construct mock user calendar
 		$userCalendar = $this->createMock(ITestCalendar::class);
 		// construct mock calendar manager and returns
@@ -385,7 +385,7 @@ class ManagerTest extends TestCase {
 		$this->assertFalse($result);
 	}
 
-	public function testHandleImipRequestWithNoUid(): void {
+	public function testHandleImipWithNoUid(): void {
 		// construct mock user calendar
 		$userCalendar = $this->createMock(ITestCalendar::class);
 		// construct mock calendar manager and returns
@@ -419,7 +419,7 @@ class ManagerTest extends TestCase {
 		$this->assertFalse($result);
 	}
 
-	public function testHandleImipRequestWithNoMatch(): void {
+	public function testHandleImipWithNoMatch(): void {
 		// construct mock user calendar
 		$userCalendar = $this->createMock(ITestCalendar::class);
 		$userCalendar->expects(self::once())
@@ -461,7 +461,7 @@ class ManagerTest extends TestCase {
 		$this->assertFalse($result);
 	}
 
-	public function testHandleImipRequest(): void {
+	public function testHandleImip(): void {
 		// construct mock user calendar
 		$userCalendar = $this->createMock(ITestCalendar::class);
 		$userCalendar->expects(self::once())
