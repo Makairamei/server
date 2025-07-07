@@ -371,6 +371,12 @@
     </UndefinedMethod>
   </file>
   <file src="apps/dav/lib/CalDAV/Reminder/NotificationProvider/EmailProvider.php">
+    <DeprecatedMethod>
+      <code><![CDATA[validateMailAddress]]></code>
+      <code><![CDATA[validateMailAddress]]></code>
+      <code><![CDATA[validateMailAddress]]></code>
+      <code><![CDATA[validateMailAddress]]></code>
+    </DeprecatedMethod>
     <LessSpecificReturnStatement>
       <code><![CDATA[$emailAddresses]]></code>
     </LessSpecificReturnStatement>
@@ -452,6 +458,9 @@
     </DeprecatedMethod>
   </file>
   <file src="apps/dav/lib/CalDAV/Schedule/IMipPlugin.php">
+    <DeprecatedMethod>
+      <code><![CDATA[validateMailAddress]]></code>
+    </DeprecatedMethod>
     <RedundantCast>
       <code><![CDATA[(string)$iTipMessage->recipientName]]></code>
     </RedundantCast>
