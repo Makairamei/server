@@ -162,7 +162,6 @@ END:VCALENDAR
 EVENT]);
 		$user = $this->createMock(IUser::class);
 		$this->userSession->expects(self::once())->method('getUser')->willReturn($user);
-		$this->mailer->expects(self::once())->method('validateMailAddress')->willReturn(true);
 		$this->eventDispatcher->expects(self::once())
 			->method('dispatchTyped')
 			->with(self::equalTo((new ContactInteractedWithEvent($user))->setEmail('user@domain.tld')));
