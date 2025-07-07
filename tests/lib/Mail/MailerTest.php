@@ -183,7 +183,8 @@ class MailerTest extends TestCase {
 					$this->urlGenerator,
 					$this->l10n,
 					$this->dispatcher,
-					$this->createMock(IFactory::class)
+					$this->createMock(IFactory::class),
+					$this->createMock(IEmailValidator::class),
 				]
 			)
 			->getMock();
