@@ -25,6 +25,7 @@ use OCP\HintException;
 use OCP\Http\Client\IClientService;
 use OCP\IConfig;
 use OCP\ITempManager;
+use OCP\L10N\IFactory;
 use OCP\Migration\IOutput;
 use OCP\Server;
 use phpseclib\File\X509;
@@ -44,6 +45,7 @@ class Installer {
 		private LoggerInterface $logger,
 		private IConfig $config,
 		private IAppManager $appManager,
+		private IFactory $l10nFactory,
 		private bool $isCLI,
 	) {
 	}
@@ -57,15 +59,10 @@ class Installer {
 	 * @return string app ID
 	 */
 	public function installApp(string $appId, bool $forceEnable = false): string {
-		$app = \OC_App::findAppInDirectories($appId);
-		if ($app === false) {
-			throw new \Exception('App not found in any app directory');
-		}
+		$appPath = $this->appManager->getAppPath($appId, true);
 
-		$basedir = $app['path'] . '/' . $appId;
-
-		$l = \OCP\Util::getL10N('core');
-		$info = $this->appManager->getAppInfoByPath($basedir . '/appinfo/info.xml', $l->getLanguageCode());
+		$l = $this->l10nFactory->get('core');
+		$info = $this->appManager->getAppInfoByPath($appPath . '/appinfo/info.xml', $l->getLanguageCode());
 
 		if (!is_array($info)) {
 			throw new \Exception(
@@ -81,7 +78,6 @@ class Installer {
 		$version = implode('.', \OCP\Util::getVersion());
 		if (!\OC_App::isAppCompatible($version, $info, $ignoreMax)) {
 			throw new \Exception(
-				// TODO $l
 				$l->t('App "%s" cannot be installed because it is not compatible with this version of the server.',
 					[$info['name']]
 				)
@@ -93,7 +89,7 @@ class Installer {
 		/** @var Coordinator $coordinator */
 		$coordinator = \OC::$server->get(Coordinator::class);
 		$coordinator->runLazyRegistration($appId);
-		\OC_App::registerAutoloading($appId, $basedir);
+		\OC_App::registerAutoloading($appId, $appPath);
 
 		$previousVersion = $this->config->getAppValue($info['id'], 'installed_version', false);
 		if ($previousVersion) {
@@ -105,13 +101,13 @@ class Installer {
 		$ms->migrate('latest', !$previousVersion);
 
 		if ($previousVersion) {
-			OC_App::executeRepairSteps($appId, $info['repair-steps']['post-migration']);
+			\OC_App::executeRepairSteps($appId, $info['repair-steps']['post-migration']);
 		}
 
 		\OC_App::setupBackgroundJobs($info['background-jobs']);
 
 		//run appinfo/install.php
-		self::includeAppScript($basedir . '/appinfo/install.php');
+		self::includeAppScript($appPath . '/appinfo/install.php');
 
 		\OC_App::executeRepairSteps($appId, $info['repair-steps']['install']);
 
@@ -443,12 +439,8 @@ class Installer {
 	 * The function will check if the path contains a .git folder
 	 */
 	private function isInstalledFromGit(string $appId): bool {
-		$app = \OC_App::findAppInDirectories($appId);
-		if ($app === false) {
-			return false;
-		}
-		$basedir = $app['path'] . '/' . $appId;
-		return file_exists($basedir . '/.git/');
+		$appPath = $this->appManager->getAppPath($appId);
+		return file_exists($appPath . '/.git/');
 	}
 
 	/**
@@ -534,18 +526,16 @@ class Installer {
 		if ($output instanceof IOutput) {
 			$output->debug('Installing shipped apps');
 		}
-		$appManager = \OCP\Server::get(IAppManager::class);
-		$config = \OCP\Server::get(IConfig::class);
 		$errors = [];
 		foreach (\OC::$APPSROOTS as $app_dir) {
 			if ($dir = opendir($app_dir['path'])) {
 				while (false !== ($filename = readdir($dir))) {
 					if ($filename[0] !== '.' and is_dir($app_dir['path'] . "/$filename")) {
 						if (file_exists($app_dir['path'] . "/$filename/appinfo/info.xml")) {
-							if ($config->getAppValue($filename, 'installed_version', null) === null) {
-								$enabled = $appManager->isDefaultEnabled($filename);
-								if (($enabled || in_array($filename, $appManager->getAlwaysEnabledApps()))
-									  && $config->getAppValue($filename, 'enabled') !== 'no') {
+							if ($this->config->getAppValue($filename, 'installed_version', '') === '') {
+								$enabled = $this->appManager->isDefaultEnabled($filename);
+								if (($enabled || in_array($filename, $this->appManager->getAlwaysEnabledApps()))
+									  && $this->config->getAppValue($filename, 'enabled') !== 'no') {
 									if ($softErrors) {
 										try {
 											$this->installShippedApp($filename, $output);
@@ -559,7 +549,7 @@ class Installer {
 									} else {
 										$this->installShippedApp($filename, $output);
 									}
-									$config->setAppValue($filename, 'enabled', 'yes');
+									$this->config->setAppValue($filename, 'enabled', 'yes');
 								}
 							}
 						}
@@ -583,12 +573,12 @@ class Installer {
 		$appPath = $this->appManager->getAppPath($app);
 		\OC_App::registerAutoloading($app, $appPath);
 
-		$ms = new MigrationService($app, \OCP\Server::get(Connection::class));
+		$ms = new MigrationService($app, Server::get(Connection::class));
 		if ($output instanceof IOutput) {
 			$ms->setOutput($output);
 		}
-		$previousVersion = $this->config->getAppValue($app, 'installed_version', false);
-		$ms->migrate('latest', !$previousVersion);
+		$previousVersion = $this->config->getAppValue($app, 'installed_version', '');
+		$ms->migrate('latest', $previousVersion !== '');
 
 		//run appinfo/install.php
 		self::includeAppScript("$appPath/appinfo/install.php");
