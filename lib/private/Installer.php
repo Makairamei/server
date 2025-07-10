@@ -97,7 +97,7 @@ class Installer {
 
 		$previousVersion = $this->config->getAppValue($info['id'], 'installed_version', false);
 		if ($previousVersion) {
-			OC_App::executeRepairSteps($appId, $info['repair-steps']['pre-migration']);
+			\OC_App::executeRepairSteps($appId, $info['repair-steps']['pre-migration']);
 		}
 
 		//install the database
@@ -113,22 +113,21 @@ class Installer {
 		//run appinfo/install.php
 		self::includeAppScript($basedir . '/appinfo/install.php');
 
-		OC_App::executeRepairSteps($appId, $info['repair-steps']['install']);
+		\OC_App::executeRepairSteps($appId, $info['repair-steps']['install']);
 
-		$config = \OCP\Server::get(IConfig::class);
 		//set the installed version
-		$config->setAppValue($info['id'], 'installed_version', $this->appManager->getAppVersion($info['id'], false));
-		$config->setAppValue($info['id'], 'enabled', 'no');
+		$this->config->setAppValue($info['id'], 'installed_version', $this->appManager->getAppVersion($info['id'], false));
+		$this->config->setAppValue($info['id'], 'enabled', 'no');
 
 		//set remote/public handlers
 		foreach ($info['remote'] as $name => $path) {
-			$config->setAppValue('core', 'remote_' . $name, $info['id'] . '/' . $path);
+			$this->config->setAppValue('core', 'remote_' . $name, $info['id'] . '/' . $path);
 		}
 		foreach ($info['public'] as $name => $path) {
-			$config->setAppValue('core', 'public_' . $name, $info['id'] . '/' . $path);
+			$this->config->setAppValue('core', 'public_' . $name, $info['id'] . '/' . $path);
 		}
 
-		OC_App::setAppTypes($info['id']);
+		\OC_App::setAppTypes($info['id']);
 
 		return $info['id'];
 	}
@@ -531,7 +530,7 @@ class Installer {
 	 *                         working ownCloud at the end instead of an aborted update.
 	 * @return array Array of error messages (appid => Exception)
 	 */
-	public static function installShippedApps(bool $softErrors = false, ?IOutput $output = null): array {
+	public function installShippedApps(bool $softErrors = false, ?IOutput $output = null): array {
 		if ($output instanceof IOutput) {
 			$output->debug('Installing shipped apps');
 		}
@@ -549,7 +548,7 @@ class Installer {
 									  && $config->getAppValue($filename, 'enabled') !== 'no') {
 									if ($softErrors) {
 										try {
-											Installer::installShippedApp($filename, $output);
+											$this->installShippedApp($filename, $output);
 										} catch (HintException $e) {
 											if ($e->getPrevious() instanceof TableExistsException) {
 												$errors[$filename] = $e;
@@ -558,7 +557,7 @@ class Installer {
 											throw $e;
 										}
 									} else {
-										Installer::installShippedApp($filename, $output);
+										$this->installShippedApp($filename, $output);
 									}
 									$config->setAppValue($filename, 'enabled', 'yes');
 								}
@@ -576,28 +575,25 @@ class Installer {
 	/**
 	 * install an app already placed in the app folder
 	 */
-	public static function installShippedApp(string $app, ?IOutput $output = null): string|false {
+	public function installShippedApp(string $app, ?IOutput $output = null): string|false {
 		if ($output instanceof IOutput) {
 			$output->debug('Installing ' . $app);
 		}
 
-		$appManager = \OCP\Server::get(IAppManager::class);
-		$config = \OCP\Server::get(IConfig::class);
-
-		$appPath = $appManager->getAppPath($app);
+		$appPath = $this->appManager->getAppPath($app);
 		\OC_App::registerAutoloading($app, $appPath);
 
 		$ms = new MigrationService($app, \OCP\Server::get(Connection::class));
 		if ($output instanceof IOutput) {
 			$ms->setOutput($output);
 		}
-		$previousVersion = $config->getAppValue($app, 'installed_version', false);
+		$previousVersion = $this->config->getAppValue($app, 'installed_version', false);
 		$ms->migrate('latest', !$previousVersion);
 
 		//run appinfo/install.php
 		self::includeAppScript("$appPath/appinfo/install.php");
 
-		$info = $appManager->getAppInfo($app);
+		$info = $this->appManager->getAppInfo($app);
 		if (is_null($info)) {
 			return false;
 		}
@@ -606,19 +602,19 @@ class Installer {
 		}
 		\OC_App::setupBackgroundJobs($info['background-jobs']);
 
-		OC_App::executeRepairSteps($app, $info['repair-steps']['install']);
+		\OC_App::executeRepairSteps($app, $info['repair-steps']['install']);
 
-		$config->setAppValue($app, 'installed_version', $appManager->getAppVersion($app));
+		$this->config->setAppValue($app, 'installed_version', $this->appManager->getAppVersion($app));
 
 		//set remote/public handlers
 		foreach ($info['remote'] as $name => $path) {
-			$config->setAppValue('core', 'remote_' . $name, $app . '/' . $path);
+			$this->config->setAppValue('core', 'remote_' . $name, $app . '/' . $path);
 		}
 		foreach ($info['public'] as $name => $path) {
-			$config->setAppValue('core', 'public_' . $name, $app . '/' . $path);
+			$this->config->setAppValue('core', 'public_' . $name, $app . '/' . $path);
 		}
 
-		OC_App::setAppTypes($info['id']);
+		\OC_App::setAppTypes($info['id']);
 
 		return $info['id'];
 	}
