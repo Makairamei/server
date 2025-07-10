@@ -9,7 +9,6 @@ declare(strict_types=1);
 namespace OCA\DAV\Paginate;
 
 use Override;
-use Sabre\DAV\Xml\Property\ResourceType;
 
 /**
  * @implements \Iterator<int, array>
@@ -25,21 +24,17 @@ class TransformResourceTypeIterator implements \Iterator {
 	#[Override] public function current(): mixed {
 		$current = $this->inner->current();
 
-		foreach ($current as &$value) {
-			if (
-				!is_array($value)
-				|| !array_key_exists(self::RESOURCE_TYPE_PROPERTY, $value)
-				|| !$value[self::RESOURCE_TYPE_PROPERTY] instanceof ResourceType
-			) {
+		$writer = new ArrayWriter();
+		foreach ($current as $key => &$value) {
+			if (!is_array($value)) {
 				continue;
 			}
 
-			$resourceTypes = $value[self::RESOURCE_TYPE_PROPERTY]->getValue();
-			// replace the object with an array that can be serialized to json
-			$value[self::RESOURCE_TYPE_PROPERTY] = array_combine(
-				array_values($resourceTypes),
-				array_fill(0, count($resourceTypes), null)
-			);
+			$writer->openMemory();
+			$writer->startElement($key);
+			$writer->write($value);
+			$writer->endElement();
+			$value = $writer->getDocument()[0]['value'];
 		}
 
 		return $current;
